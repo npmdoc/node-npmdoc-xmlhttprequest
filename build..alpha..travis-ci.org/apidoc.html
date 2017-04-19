@@ -72,6 +72,19 @@
 
     </ol></li>
 
+    <li class="apidocModuleLi"><a href="#apidoc.module.xmlhttprequest.XMLHttpRequest">module xmlhttprequest.XMLHttpRequest</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.xmlhttprequest.XMLHttpRequest.XMLHttpRequest">
+            function <span class="apidocSignatureSpan">xmlhttprequest.</span>XMLHttpRequest
+            <span class="apidocSignatureSpan">()</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
 </ol></div>
 
 <div class="apidocSectionDiv">
@@ -80,6 +93,199 @@
 
     <h2>
         <a href="#apidoc.element.xmlhttprequest.XMLHttpRequest" id="apidoc.element.xmlhttprequest.XMLHttpRequest">
+        function <span class="apidocSignatureSpan">xmlhttprequest.</span>XMLHttpRequest
+        <span class="apidocSignatureSpan">()</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">XMLHttpRequest = function () {
+  &#x22;use strict&#x22;;
+
+<span class="apidocCodeCommentSpan">  /**
+   * Private variables
+   */
+</span>  var self = this;
+  var http = require(&#x22;http&#x22;);
+  var https = require(&#x22;https&#x22;);
+
+  // Holds http.js objects
+  var request;
+  var response;
+
+  // Request settings
+  var settings = {};
+
+  // Disable header blacklist.
+  // Not part of XHR specs.
+  var disableHeaderCheck = false;
+
+  // Set some default headers
+  var defaultHeaders = {
+    &#x22;User-Agent&#x22;: &#x22;node-XMLHttpRequest&#x22;,
+    &#x22;Accept&#x22;: &#x22;*/*&#x22;,
+  };
+
+  var headers = {};
+  var headersCase = {};
+
+  // These headers are not user setable.
+  // The following are allowed but banned in the spec:
+  // * user-agent
+  var forbiddenRequestHeaders = [
+    &#x22;accept-charset&#x22;,
+    &#x22;accept-encoding&#x22;,
+    &#x22;access-control-request-headers&#x22;,
+    &#x22;access-control-request-method&#x22;,
+    &#x22;connection&#x22;,
+    &#x22;content-length&#x22;,
+    &#x22;content-transfer-encoding&#x22;,
+    &#x22;cookie&#x22;,
+    &#x22;cookie2&#x22;,
+    &#x22;date&#x22;,
+    &#x22;expect&#x22;,
+    &#x22;host&#x22;,
+    &#x22;keep-alive&#x22;,
+    &#x22;origin&#x22;,
+    &#x22;referer&#x22;,
+    &#x22;te&#x22;,
+    &#x22;trailer&#x22;,
+    &#x22;transfer-encoding&#x22;,
+    &#x22;upgrade&#x22;,
+    &#x22;via&#x22;
+  ];
+
+  // These request methods are not allowed
+  var forbiddenRequestMethods = [
+    &#x22;TRACE&#x22;,
+    &#x22;TRACK&#x22;,
+    &#x22;CONNECT&#x22;
+  ];
+
+  // Send flag
+  var sendFlag = false;
+  // Error flag, used when errors occur or abort is called
+  var errorFlag = false;
+
+  // Event listeners
+  var listeners = {};
+
+  /**
+   * Constants
+   */
+
+  this.UNSENT = 0;
+  this.OPENED = 1;
+  this.HEADERS_RECEIVED = 2;
+  this.LOADING = 3;
+  this.DONE = 4;
+
+  /**
+   * Public vars
+   */
+
+  // Current state
+  this.readyState = this.UNSENT;
+
+  // default ready state change handler in case one is not set or is set late
+  this.onreadystatechange = null;
+
+  // Result &#x26; response
+  this.responseText = &#x22;&#x22;;
+  this.responseXML = &#x22;&#x22;;
+  this.status = null;
+  this.statusText = null;
+
+  // Whether cross-site Access-Control requests should be made using
+  // credentials such as cookies or authorization headers
+  this.withCredentials = false;
+
+  /**
+   * Private methods
+   */
+
+  /**
+   * Check if the specified header is allowed.
+   *
+   * @param string header Header to validate
+   * @return boolean False if not allowed, otherwise true
+   */
+  var isAllowedHttpHeader = function(header) {
+    return disableHeaderCheck || (header &#x26;&#x26; forbiddenRequestHeaders.indexOf(header.toLowerCase()) === -1);
+  };
+
+  /**
+   * Check if the specified method is allowed.
+   *
+   * @param string method Request method to validate
+   * @return boolean False if not allowed, otherwise true
+   */
+  var isAllowedHttpMethod = function(method) {
+    return (method &#x26;&#x26; forbiddenRequestMethods.indexOf(method) === -1);
+  };
+
+  /**
+   * Public methods
+   */
+
+  /**
+   * Open the connection. Currently supports local server requests.
+   *
+   * @param string method Connection method (eg GET, POST)
+   * @param string url URL for the connection.
+   * @param boolean async Asynchronous connection. Default is true.
+   * @param string user Username for basic authentication (optional)
+   * @param string password Password for basic authentication (optional)
+   */
+  this.open = function(method, url, async, user, password) {
+    this.abort();
+    errorFlag = false;
+
+    // Check for valid request method
+    if (!isAllowedHttpMethod(method)) {
+      throw new Error(&#x22;SecurityError: Request method not allowed&#x22;);
+    }
+
+    settings = {
+      &#x22;method&#x22;: method,
+      &#x22;url&#x22;: url.toString(),
+      &#x22;async&#x22;: (typeof async !== &#x22;boolean&#x22; ? true : async),
+      &#x22;user&#x22;: user || null,
+      &#x22;password&#x22;: password || null
+    };
+
+    setState(this.OPENED);
+  };
+
+  /**
+   * Disables or enables isAllowedHttpHeader() check the request. Enabled by default.
+   * This does not conform to the W3C spec.
+   *
+   * @param boolean state Enable or disable header checking.
+   */
+  this.setDisableHeaderCheck = function(state) {
+    disableHeaderCheck = state;
+  };
+
+  /**
+   * Sets a header for the request or appends the value if one is already set.
+   *
+   * @param string header Header name
+   * @param string value Header value
+   */
+  this.setRequestHeader = function(header, value) {
+    if (this.readyState !== this.OPENED ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.xmlhttprequest.XMLHttpRequest" id="apidoc.module.xmlhttprequest.XMLHttpRequest">module xmlhttprequest.XMLHttpRequest</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.xmlhttprequest.XMLHttpRequest.XMLHttpRequest" id="apidoc.element.xmlhttprequest.XMLHttpRequest.XMLHttpRequest">
         function <span class="apidocSignatureSpan">xmlhttprequest.</span>XMLHttpRequest
         <span class="apidocSignatureSpan">()</span>
         </a>
